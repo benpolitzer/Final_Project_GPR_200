@@ -71,7 +71,7 @@ int main() {
 
 	//Background
 	unsigned int wallTexture = bp::loadTexture("assets/wall.png", GL_REPEAT, GL_LINEAR);
-	unsigned int noiseTexture = bp::loadTexture("assets/noiseTexture.png", GL_REPEAT, GL_LINEAgR);
+	unsigned int noiseTexture = bp::loadTexture("assets/noiseTexture.png", GL_REPEAT, GL_LINEAR);
 
 	//Kirby
 	unsigned int kirbyTexture = bp::loadTexture("assets/kirby.png", GL_REPEAT, GL_NEAREST);
