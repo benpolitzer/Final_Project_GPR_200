@@ -19,6 +19,7 @@ namespace bp {
 		void setVec2(const string& name, float x, float y) const;
 		void setVec3(const string& name, float x, float y, float z) const;
 		void setVec4(const string& name, float x, float y, float z, float w) const;
+
 	private:
 		unsigned int m_id;
 	};

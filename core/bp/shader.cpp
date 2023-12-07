@@ -86,4 +86,5 @@ namespace bp {
 	{
 		glUniform4f(glGetUniformLocation(m_id, name.c_str()), x, y, z, w);
 	}
+
 }
