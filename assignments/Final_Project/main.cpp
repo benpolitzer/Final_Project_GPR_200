@@ -22,6 +22,7 @@
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void resetCamera(ew::Camera& camera, ew::CameraController& cameraController);
+ew::Mat4 removeTranslation(ew::Mat4);
 
 int SCREEN_WIDTH = 1080;
 int SCREEN_HEIGHT = 720;
@@ -127,7 +128,7 @@ int main() {
 	ew::Shader skyboxShader("assets/skyboxShader.vert", "assets/skyboxShader.frag");
 
 	skyboxShader.use();
-	skyboxShader.setInt("skybox", 0);
+
 
 	//Create Mesh Data
 	ew::MeshData sphereMeshData = bp::createSphere(sphereRadius, sphereSegments);
@@ -245,18 +246,24 @@ int main() {
 		ew::Vec3 lightF = ew::Vec3(sinf(lightRot.y) * cosf(lightRot.x), sinf(lightRot.x), -cosf(lightRot.y) * cosf(lightRot.x));
 		shader.setVec3("_LightDir", lightF);
 		
-		glDepthFunc(GL_LEQUAL);
+		//glDepthFunc(GL_LEQUAL);
+		glDepthMask(GL_FALSE);
 		skyboxShader.use();
-		
+		skyboxShader.setInt("skybox", 0);
+		skyboxShader.setMat4("view", removeTranslation(camera.ViewMatrix()));
+		//skyboxShader.setMat4("view", camera.ViewMatrix());
+		skyboxShader.setMat4("projection", camera.ProjectionMatrix());
 
 		glBindVertexArray(skyboxVAO);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
-		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-		glBindVertexArray(0);
+		//glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+		//glBindVertexArray(0);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		// Switch back to the normal depth function
-		glDepthFunc(GL_LESS);
+		//glDepthFunc(GL_LESS);
+		glDepthMask(GL_TRUE);
 
 		shader.use();
 		//Draw Sphere
@@ -347,4 +354,15 @@ void resetCamera(ew::Camera& camera, ew::CameraController& cameraController) {
 	cameraController.pitch = 0.0f;
 }
 
-
+ew::Mat4 removeTranslation(ew::Mat4 in)
+{
+	for (int i = 0; i <= 3; i++)
+	{
+		in[3][i] = 0.0f;
+	}
+	for (int i = 0; i <= 3; i++)
+	{
+		in[i][3] = 0.0f;
+	}
+	return in;
+}
