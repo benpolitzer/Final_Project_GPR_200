@@ -258,7 +258,7 @@ int main() {
 		// Switch back to the normal depth function
 		glDepthFunc(GL_LESS);
 
-
+		shader.use();
 		//Draw Sphere
 		shader.setMat4("_Model", sphereTransform.getModelMatrix());
 		sphereMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
