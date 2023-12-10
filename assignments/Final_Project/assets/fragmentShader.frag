@@ -1,6 +1,7 @@
-#version 450
+#version 330 core
 out vec4 FragColor;
 
+in vec3 Position;
 in vec3 Normal;
 in vec2 UV;
 uniform sampler2D _Texture;
@@ -12,34 +13,12 @@ uniform sampler2D _Texture;
 //4 for shaded
 uniform int _Mode;
 uniform vec3 _Color;
-uniform vec3 _LightDir;
-uniform float _AmbientK = 0.3;
-uniform float _DiffuseK = 0.7;
-
-float calcLight(vec3 normal){
-	return _AmbientK + _DiffuseK * max(dot(-_LightDir,normal),0.0);
-}
+uniform vec3 cameraPos;
+uniform samplerCube skybox;
 
 void main(){
-	if (_Mode == 0){
-		FragColor = vec4(_Color,1.0);
-	}
-	else if (_Mode == 1){
-		vec3 normal = normalize(Normal);
-		FragColor = vec4(abs(normal),1.0);
-	}
-	else if (_Mode == 2){
-		FragColor = vec4(UV,0.0,1.0);
-	}
-	else if (_Mode == 3){
-		FragColor = texture(_Texture,UV);
-	}else if (_Mode == 4){
-		vec3 normal = normalize(Normal);
-		vec3 col = _Color * calcLight(normal);
-		FragColor = vec4(col,1.0);
-	}else if (_Mode == 5){
-		vec3 normal = normalize(Normal);
-		vec3 col = texture(_Texture,UV).rgb * calcLight(normal);
-		FragColor = vec4(col,1.0);
-	}
+    vec3 I = normalize(Position - cameraPos);
+    vec3 R = reflect(I, normalize(Normal));
+    FragColor = vec4(texture(skybox, R).rgb, 1.0);
+
 }

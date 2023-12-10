@@ -19,40 +19,27 @@
 #include <iostream>
 #include <ew/ewMath/mat4.h>
 
-
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 void resetCamera(ew::Camera& camera, ew::CameraController& cameraController);
 ew::Mat4 removeTranslation(ew::Mat4);
 
-int SCREEN_WIDTH = 1080;
-int SCREEN_HEIGHT = 720;
+int SCREEN_WIDTH = 1920;
+int SCREEN_HEIGHT = 1080;
 
 float prevTime;
 
 struct AppSettings {
-	const char* shadingModeNames[6] = { "Solid Color","Normals","UVs","Texture","Lit","Texture Lit" };
-	int shadingModeIndex;
-
-	ew::Vec3 shapeColor = ew::Vec3(1.0f);
 	bool wireframe = false;
 	bool drawAsPoints = false;
-	bool backFaceCulling = true; //When this is false, the user must enable and then disable
-								 //backFaceCulling for it to acutually work. No clue why.
-
-	//Euler angles (degrees)
-	ew::Vec3 lightRotation = ew::Vec3(0, 0, 0);
 }appSettings;
-
-
 
 ew::Camera camera;
 ew::CameraController cameraController;
 
-float sphereRadius = 1.0f, cubeSize = 15.0f;
+float sphereRadius = 1.0f;
 int sphereSegments = 20;
 
-float skyboxVertices[] =
-{
+float skyboxVertices[] ={
 	//   Coordinates
 	-1.0f, -1.0f,  1.0f,//        7--------6
 	 1.0f, -1.0f,  1.0f,//       /|       /|
@@ -63,9 +50,7 @@ float skyboxVertices[] =
 	 1.0f,  1.0f, -1.0f,//      0--------1
 	-1.0f,  1.0f, -1.0f
 };
-
-unsigned int skyboxIndices[] =
-{
+unsigned int skyboxIndices[] ={
 	// Right
 	1, 2, 6,
 	6, 5, 1,
@@ -112,37 +97,35 @@ int main() {
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init();
 
-	//Enable back face culling
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_FRONT);
-
 	//Depth testing - required for depth sorting!
 	glEnable(GL_DEPTH_TEST);
 	glPointSize(3.0f);
 	glPolygonMode(GL_FRONT_AND_BACK, appSettings.wireframe ? GL_LINE : GL_FILL);
 
+	//Shader creation
 	ew::Shader shader("assets/vertexShader.vert", "assets/fragmentShader.frag");
-	unsigned int wallTexture = ew::loadTexture("assets/wall.png", GL_MIRRORED_REPEAT, GL_LINEAR);
-	unsigned int brickTexture = ew::loadTexture("assets/brick_color.jpg", GL_REPEAT, GL_LINEAR);
+	ew::Shader skyboxShader("assets/skyboxShader.vert", "assets/skyboxShader.frag");
+
+	//Texture creation
+	unsigned int discoTexture = ew::loadTexture("assets/discoBall.jpg", GL_REPEAT, GL_LINEAR);
 
 	//Create Mesh Data
 	ew::MeshData sphereMeshData = bp::createSphere(sphereRadius, sphereSegments);
+	ew::Mesh cubeMesh(ew::createCube(1.0f));
 
 	//Create Mesh Renderer
 	ew::Mesh sphereMesh(sphereMeshData);
 
 	//Initialize transforms
 	ew::Transform sphereTransform;
+	ew::Transform cubeTransform;
 	sphereTransform.position = ew::Vec3(0.0f, 0.0f, 0.0f);
 
 	resetCamera(camera, cameraController);
 
 	/////////////////////SKYBOX/////////////////////
-	ew::Shader skyboxShader("assets/skyboxShader.vert", "assets/skyboxShader.frag");
 
-	skyboxShader.use();
-
-	// Create VAO, VBO, and EBO for the skybox
+	// Creation of VAO, VBO, and EBO for the skybox
 	unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
 	glGenVertexArrays(1, &skyboxVAO);
 	glGenBuffers(1, &skyboxVBO);
@@ -158,33 +141,29 @@ int main() {
 	glBindVertexArray(0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-
-	std::string facesCubemap[6] =
-	{
-			"assets/posx.jpg",
-			"assets/negx.jpg",
-			"assets/posy.jpg",
-			"assets/negy.jpg",
-			"assets/posz.jpg",
-			"assets/negz.jpg"
+	//Textures for cube map stored in an array of strings
+	std::string facesCubemap[6] ={
+			"assets/Cube Maps/Church/posx.jpg",
+			"assets/Cube Maps/Church/negx.jpg",
+			"assets/Cube Maps/Church/posy.jpg",
+			"assets/Cube Maps/Church/negy.jpg",
+			"assets/Cube Maps/Church/posz.jpg",
+			"assets/Cube Maps/Church/negz.jpg"
 
 	};
 	
-
-	// Creates the cubemap texture object
+	//Creates the cubemap texture object
 	unsigned int cubemapTexture;
 	glGenTextures(1, &cubemapTexture);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	// These are very important to prevent seams
+	//Prevent seams
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	// This might help with seams on some systems
-	//glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
-	// Cycles through all the textures and attaches them to the cubemap object
+	//Cycles through all the textures and attaches them to the cubemap object
 	for (unsigned int i = 0; i < 6; i++)
 	{
 		int width, height, nrChannels;
@@ -214,6 +193,9 @@ int main() {
 	}
 	/////////////////////END/////////////////////
 
+	skyboxShader.use();
+	skyboxShader.setInt("skybox", 0);
+
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 		camera.aspectRatio = (float)SCREEN_WIDTH / SCREEN_HEIGHT;
@@ -225,7 +207,6 @@ int main() {
 		cameraController.Move(window, &camera, deltaTime);
 
 		//Render
-		//glClearColor(appSettings.bgColor.x, appSettings.bgColor.y, appSettings.bgColor.z, 1.0f);
 		glClearColor(0.07f, 0.13f, 0.17f, 1.0f);
 
 		//Clear both color buffer AND depth buffer
@@ -236,24 +217,16 @@ int main() {
 		glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
 
 		shader.use();
-		glBindTexture(GL_TEXTURE_2D, wallTexture);
+		glBindTexture(GL_TEXTURE_2D, cubemapTexture);
 		shader.setInt("_Texture", 0);
-		shader.setInt("_Mode", appSettings.shadingModeIndex);
-		shader.setVec3("_Color", appSettings.shapeColor);
 		shader.setMat4("_ViewProjection", camera.ProjectionMatrix() * camera.ViewMatrix());
 
-		//Euler angels to forward vector
-		ew::Vec3 lightRot = appSettings.lightRotation * ew::DEG2RAD;
-		ew::Vec3 lightF = ew::Vec3(sinf(lightRot.y) * cosf(lightRot.x), sinf(lightRot.x), -cosf(lightRot.y) * cosf(lightRot.x));
-		shader.setVec3("_LightDir", lightF);
-		
 		/////////////////////SKYBOX/////////////////////
 		glDepthFunc(GL_LEQUAL);
 		//glDepthMask(GL_FALSE);
 		skyboxShader.use();
 		skyboxShader.setInt("skybox", 0);
 		skyboxShader.setMat4("view", removeTranslation(camera.ViewMatrix()));
-		//skyboxShader.setMat4("view", camera.ViewMatrix());
 		skyboxShader.setMat4("projection", camera.ProjectionMatrix());
 
 		glBindVertexArray(skyboxVAO);
@@ -264,15 +237,16 @@ int main() {
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		// Switch back to the normal depth function
-		//glDepthFunc(GL_LESS);
-		glDepthMask(GL_TRUE);
+		glDepthMask(GL_LESS);
 		/////////////////////END/////////////////////
-
 
 		shader.use();
 		//Draw Sphere
 		shader.setMat4("_Model", sphereTransform.getModelMatrix());
 		sphereMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
+
+		shader.setMat4("_Model", cubeTransform.getModelMatrix());
+		cubeMesh.draw();
 
 		//Render UI
 		{
@@ -284,15 +258,7 @@ int main() {
 			if (ImGui::CollapsingHeader("Camera")) {
 				ImGui::DragFloat3("Position", &camera.position.x, 0.1f);
 				ImGui::DragFloat3("Target", &camera.target.x, 0.1f);
-				ImGui::Checkbox("Orthographic", &camera.orthographic);
-				if (camera.orthographic) {
-					ImGui::DragFloat("Ortho Height", &camera.orthoHeight, 0.1f);
-				}
-				else {
-					ImGui::SliderFloat("FOV", &camera.fov, 0.0f, 180.0f);
-				}
-				ImGui::DragFloat("Near Plane", &camera.nearPlane, 0.1f, 0.0f);
-				ImGui::DragFloat("Far Plane", &camera.farPlane, 0.1f, 0.0f);
+				ImGui::SliderFloat("FOV", &camera.fov, 0.0f, 180.0f);
 				ImGui::DragFloat("Move Speed", &cameraController.moveSpeed, 0.1f);
 				ImGui::DragFloat("Sprint Speed", &cameraController.sprintMoveSpeed, 0.1f);
 				if (ImGui::Button("Reset")) {
@@ -301,22 +267,14 @@ int main() {
 			}
 
 			//ImGui::ColorEdit3("BG color", &appSettings.bgColor.x);
-			ImGui::ColorEdit3("Shape color", &appSettings.shapeColor.x);
-			ImGui::Combo("Shading mode", &appSettings.shadingModeIndex, appSettings.shadingModeNames, IM_ARRAYSIZE(appSettings.shadingModeNames));
-			if (appSettings.shadingModeIndex > 3) {
-				ImGui::DragFloat3("Light Rotation", &appSettings.lightRotation.x, 1.0f);
-			}
 			ImGui::Checkbox("Draw as points", &appSettings.drawAsPoints);
 			if (ImGui::Checkbox("Wireframe", &appSettings.wireframe)) {
 				glPolygonMode(GL_FRONT_AND_BACK, appSettings.wireframe ? GL_LINE : GL_FILL);
 			}
-			if (ImGui::Checkbox("Back-face culling", &appSettings.backFaceCulling)) {
-				if (appSettings.backFaceCulling)
-					glEnable(GL_CULL_FACE);
-				else
-					glDisable(GL_CULL_FACE);
-			}
 
+			ImGui::Text("Cube Controls");
+			ImGui::DragFloat3("Cube Size", &cubeTransform.scale.x, 0.1f);
+			ImGui::DragFloat3("Cube Transform", &cubeTransform.position.x, 0.1f);
 
 			ImGui::Text("Sphere Controls");
 			ImGui::DragFloat3("Sphere Scale", &sphereTransform.scale.x, 0.1f);
@@ -333,6 +291,8 @@ int main() {
 
 		glfwSwapBuffers(window);
 	}
+	glDeleteVertexArrays(1, &skyboxVAO);
+	glDeleteBuffers(1, &skyboxVBO);
 	printf("Shutting down...");
 }
 
