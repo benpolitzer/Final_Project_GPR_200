@@ -72,6 +72,7 @@ unsigned int skyboxIndices[] ={
 };
 
 int main() {
+	bool voronoi = false;
 	printf("Initializing...");
 	if (!glfwInit()) {
 		printf("GLFW failed to init!");
@@ -246,6 +247,12 @@ int main() {
 		//Draw Sphere
 		shader.setMat4("_Model", sphereTransform.getModelMatrix());
 		shader.setVec3("cameraPos", camera.position);
+
+		if (voronoi)
+			shader.setInt("_Voronoi", 1);
+		else
+			shader.setInt("_Voronoi", 0);
+
 		sphereMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
 
 		shader.setMat4("_Model", cubeTransform.getModelMatrix());
@@ -283,6 +290,7 @@ int main() {
 			ImGui::DragFloat3("Sphere Scale", &sphereTransform.scale.x, 0.1f);
 			ImGui::DragFloat3("Sphere Transform", &sphereTransform.position.x, 0.1f);
 			ImGui::DragInt("Sphere Segments", &sphereSegments, 0.1, 3.0, 1000000000.0);
+			ImGui::Checkbox("Use Voronoi (WIP)", &voronoi);
 			sphereMeshData = bp::createSphere(sphereRadius, sphereSegments);
 			sphereMesh.load(sphereMeshData);
 

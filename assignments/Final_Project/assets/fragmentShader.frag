@@ -15,6 +15,12 @@ uniform int _Mode;
 uniform vec3 _Color;
 uniform vec3 cameraPos;
 uniform samplerCube skybox;
+uniform float _Rotate;
+uniform float iTime;
+uniform int _Voronoi;
+
+const vec2 RESOLUTION = vec2(1920,1080);
+const float PI = 3.1415926;
 
 vec2 makeNoise( vec2 p )
 {
@@ -74,16 +80,42 @@ vec3 voronoi( in vec2 x )
 }
 
 void main(){
+    //Experementing with voronoi from https://www.shadertoy.com/view/MlVBRR
+    if(_Voronoi==1){
     vec3 fragCoord = gl_FragCoord.xyz;
-    vec2 p = fragCoord.xy/vec2(1920,1920);
-    vec3 v = voronoi(8.0*p);
+    vec2 p = (2.0*fragCoord.xy-RESOLUTION.xy) / RESOLUTION.y;
+    //vec3 ro = Position - cameraPos; //Camera pos??
+	vec3 rd = normalize( vec3(p,-2.0) );
+    vec3 q =  1.0 * rd;
+    vec3 n = -normalize(q);
+        
+    float r = length(n);
+    float theta = acos(n.y/r) / PI;
+    float phi   = (atan(n.z,n.x) / PI + 1.0)/2.0;
+    phi = mod(phi + _Rotate*iTime, 1.0);
+    float phiN = fract(phi);    
+    float thetaN = fract(theta);
+
+        
+    vec2 x = vec2(thetaN, phiN);
+    //vec2 p = (2.0*fragCoord.xy-RESOLUTION.xy) / RESOLUTION.y;
+    vec3 v = voronoi(vec2(50.0,100.0)*x);
 
     vec3 I = normalize(Position - cameraPos);   
     vec3 R = reflect(I, normalize(Normal)) * vec3(1.0, 1.0, -1.0);
-    R = mix(vec3(1.0,0.6,0.0), R, smoothstep( 0.0, 0.07, v.x ) );
+    vec3 C = texture(skybox, R).rgb * mix(0.25, 1.0, smoothstep( 0.0, 0.07, v.x ) );
+    //FragColor = vec4(texture(skybox, R).rgb, 1.0);
+    FragColor = vec4(C, 1.0);
+    }
+
+
+
+
+    else{
+    vec3 I = normalize(Position - cameraPos);   
+    vec3 R = reflect(I, normalize(Normal)) * vec3(1.0, 1.0, -1.0);
     FragColor = vec4(texture(skybox, R).rgb, 1.0);
-
-
+    }
     //alternate calculation
 //    vec3 eye_forward = normalize(vec3((cos(cameraPos.y) * cos(cameraPos.x)),
 //                                sin(cameraPos.y),
