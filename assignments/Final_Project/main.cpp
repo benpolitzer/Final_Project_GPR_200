@@ -113,13 +113,15 @@ int main() {
 	ew::MeshData sphereMeshData = bp::createSphere(sphereRadius, sphereSegments);
 	ew::Mesh cubeMesh(ew::createCube(1.0f));
 
+
 	//Create Mesh Renderer
 	ew::Mesh sphereMesh(sphereMeshData);
 
 	//Initialize transforms
 	ew::Transform sphereTransform;
 	ew::Transform cubeTransform;
-	sphereTransform.position = ew::Vec3(0.0f, 0.0f, 0.0f);
+	sphereTransform.position = ew::Vec3(2.0f, 0.0f, 0.0f);
+	cubeTransform.position = ew::Vec3(-2.0f, 0.0f, 0.0f);
 
 	resetCamera(camera, cameraController);
 
@@ -243,6 +245,7 @@ int main() {
 		shader.use();
 		//Draw Sphere
 		shader.setMat4("_Model", sphereTransform.getModelMatrix());
+		shader.setVec3("cameraPos", camera.position);
 		sphereMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
 
 		shader.setMat4("_Model", cubeTransform.getModelMatrix());
