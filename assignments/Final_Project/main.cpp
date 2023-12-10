@@ -114,7 +114,7 @@ int main() {
 
 	//Enable back face culling
 	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
+	glCullFace(GL_FRONT);
 
 	//Depth testing - required for depth sorting!
 	glEnable(GL_DEPTH_TEST);
@@ -124,11 +124,6 @@ int main() {
 	ew::Shader shader("assets/vertexShader.vert", "assets/fragmentShader.frag");
 	unsigned int wallTexture = ew::loadTexture("assets/wall.png", GL_MIRRORED_REPEAT, GL_LINEAR);
 	unsigned int brickTexture = ew::loadTexture("assets/brick_color.jpg", GL_REPEAT, GL_LINEAR);
-
-	ew::Shader skyboxShader("assets/skyboxShader.vert", "assets/skyboxShader.frag");
-
-	skyboxShader.use();
-
 
 	//Create Mesh Data
 	ew::MeshData sphereMeshData = bp::createSphere(sphereRadius, sphereSegments);
@@ -141,6 +136,11 @@ int main() {
 	sphereTransform.position = ew::Vec3(0.0f, 0.0f, 0.0f);
 
 	resetCamera(camera, cameraController);
+
+	/////////////////////SKYBOX/////////////////////
+	ew::Shader skyboxShader("assets/skyboxShader.vert", "assets/skyboxShader.frag");
+
+	skyboxShader.use();
 
 	// Create VAO, VBO, and EBO for the skybox
 	unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
@@ -161,12 +161,13 @@ int main() {
 
 	std::string facesCubemap[6] =
 	{
-			"assets/negx.jpg",
-			"assets/negy.jpg",
-			"assets/negz.jpg",
 			"assets/posx.jpg",
+			"assets/negx.jpg",
 			"assets/posy.jpg",
-			"assets/posz.jpg"
+			"assets/negy.jpg",
+			"assets/posz.jpg",
+			"assets/negz.jpg"
+
 	};
 	
 
@@ -211,7 +212,7 @@ int main() {
 			stbi_image_free(data);
 		}
 	}
-
+	/////////////////////END/////////////////////
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
@@ -246,8 +247,9 @@ int main() {
 		ew::Vec3 lightF = ew::Vec3(sinf(lightRot.y) * cosf(lightRot.x), sinf(lightRot.x), -cosf(lightRot.y) * cosf(lightRot.x));
 		shader.setVec3("_LightDir", lightF);
 		
-		//glDepthFunc(GL_LEQUAL);
-		glDepthMask(GL_FALSE);
+		/////////////////////SKYBOX/////////////////////
+		glDepthFunc(GL_LEQUAL);
+		//glDepthMask(GL_FALSE);
 		skyboxShader.use();
 		skyboxShader.setInt("skybox", 0);
 		skyboxShader.setMat4("view", removeTranslation(camera.ViewMatrix()));
@@ -257,13 +259,15 @@ int main() {
 		glBindVertexArray(skyboxVAO);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
-		//glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-		//glBindVertexArray(0);
+		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
 		// Switch back to the normal depth function
 		//glDepthFunc(GL_LESS);
 		glDepthMask(GL_TRUE);
+		/////////////////////END/////////////////////
+
 
 		shader.use();
 		//Draw Sphere
