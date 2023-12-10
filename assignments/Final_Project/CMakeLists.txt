@@ -17,7 +17,7 @@ ${CMAKE_CURRENT_SOURCE_DIR}/assets/
 ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets/)
 
 install(FILES ${FINAL_PROJECT_INC} DESTINATION include/Final_Project)
-add_executable(Final_Project ${FINAL_PROJECT_SRC} ${FINAL_PROJECT_INC} ${FINAL_PROJECT_ASSETS})
+add_executable(Final_Project ${FINAL_PROJECT_SRC} ${FINAL_PROJECT_INC} ${FINAL_PROJECT_ASSETS}  )
 target_link_libraries(Final_Project PUBLIC core IMGUI)
 target_include_directories(Final_Project PUBLIC ${CORE_INC_DIR} ${stb_INCLUDE_DIR})
 
