@@ -1,3 +1,6 @@
+//Reflections implemented by Austin Butt and Benjamin Politzer
+//Skybox implemented by Benjamin Politzer with debugging from William Rutherford
+//Vornoi implemented by William Rutherford
 #include <stdio.h>
 #include <math.h>
 
@@ -37,17 +40,17 @@ ew::Camera camera;
 ew::CameraController cameraController;
 
 float sphereRadius = 1.0f;
-int sphereSegments = 20;
+int sphereSegments = 50;
 
 float skyboxVertices[] ={
 	//   Coordinates
-	-1.0f, -1.0f,  1.0f,//        7--------6
-	 1.0f, -1.0f,  1.0f,//       /|       /|
-	 1.0f, -1.0f, -1.0f,//      4--------5 |
-	-1.0f, -1.0f, -1.0f,//      | |      | |
-	-1.0f,  1.0f,  1.0f,//      | 3------|-2
-	 1.0f,  1.0f,  1.0f,//      |/       |/
-	 1.0f,  1.0f, -1.0f,//      0--------1
+	-1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f, -1.0f,
+	-1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f, -1.0f,
 	-1.0f,  1.0f, -1.0f
 };
 unsigned int skyboxIndices[] ={
@@ -98,70 +101,68 @@ int main() {
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init();
 
-	//Depth testing - required for depth sorting!
-	glEnable(GL_DEPTH_TEST);
-	glPointSize(3.0f);
-	glPolygonMode(GL_FRONT_AND_BACK, appSettings.wireframe ? GL_LINE : GL_FILL);
-
 	//Shader creation
 	ew::Shader shader("assets/vertexShader.vert", "assets/fragmentShader.frag");
 	ew::Shader skyboxShader("assets/skyboxShader.vert", "assets/skyboxShader.frag");
 
-	//Texture creation
-	unsigned int discoTexture = ew::loadTexture("assets/discoBall.jpg", GL_REPEAT, GL_LINEAR);
-
-	//Create Mesh Data
+	//Sphere Mesh
 	ew::MeshData sphereMeshData = bp::createSphere(sphereRadius, sphereSegments);
-	ew::Mesh cubeMesh(ew::createCube(1.0f));
-
-
-	//Create Mesh Renderer
 	ew::Mesh sphereMesh(sphereMeshData);
 
-	//Initialize transforms
+	//Initialize transforms for sphere
 	ew::Transform sphereTransform;
-	ew::Transform cubeTransform;
-	sphereTransform.position = ew::Vec3(2.0f, 0.0f, 0.0f);
-	cubeTransform.position = ew::Vec3(-2.0f, 0.0f, 0.0f);
+	sphereTransform.position = ew::Vec3(0.0f, 0.0f, 0.0f);
 
 	resetCamera(camera, cameraController);
 
 	/////////////////////SKYBOX/////////////////////
 
-	// Creation of VAO, VBO, and EBO for the skybox
+	//Creation of VAO, VBO, and EBO for the skybox
+	glEnable(GL_DEPTH_TEST);
 	unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
+	//Generates a VAO and stores its ID in skyboxVAO which is then bound
 	glGenVertexArrays(1, &skyboxVAO);
-	glGenBuffers(1, &skyboxVBO);
-	glGenBuffers(1, &skyboxEBO);
 	glBindVertexArray(skyboxVAO);
+	//Generates a VBO and stores its ID in skyboxVBO which is then bound
+	glGenBuffers(1, &skyboxVBO);
 	glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+	//Generates a EBO and stores its ID in skyboxVBO which is then bound
+	glGenBuffers(1, &skyboxEBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skyboxEBO);
+	//Loads the vertex data into the VBO
+	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+	//Loads the indices data into the EBO
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(skyboxIndices), &skyboxIndices, GL_STATIC_DRAW);
+	//Sets up the vertex attribute pointer for position data 
+	//where 3 indicates there are that many components per vertex
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
+	//Unbinds the array buffer to prevent modification
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	//Unbinds the VAO
 	glBindVertexArray(0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 	//Textures for cube map stored in an array of strings
 	std::string facesCubemap[6] ={
-			"assets/Cube Maps/Church/posx.jpg",
-			"assets/Cube Maps/Church/negx.jpg",
-			"assets/Cube Maps/Church/posy.jpg",
-			"assets/Cube Maps/Church/negy.jpg",
-			"assets/Cube Maps/Church/posz.jpg",
-			"assets/Cube Maps/Church/negz.jpg"
-
+			"assets/Cube Maps/Chapel/posx.jpg",
+			"assets/Cube Maps/Chapel/negx.jpg",
+			"assets/Cube Maps/Chapel/posy.jpg",
+			"assets/Cube Maps/Chapel/negy.jpg",
+			"assets/Cube Maps/Chapel/posz.jpg",
+			"assets/Cube Maps/Chapel/negz.jpg"
 	};
 	
 	//Creates the cubemap texture object
 	unsigned int cubemapTexture;
+	//Generates a single texture object and stores its ID in cubemapTexture
 	glGenTextures(1, &cubemapTexture);
+	//Binds the texture object to the target GL_TEXTURE_CUBE_MAP for operations down the line
 	glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+	//Sets the magnification and minification filter to linear interpolation
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	//Prevent seams
+	//Prevent seams that may appear at edges during rendering
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -170,34 +171,44 @@ int main() {
 	for (unsigned int i = 0; i < 6; i++)
 	{
 		int width, height, nrChannels;
+		//Load image data from the file and returns a pointer to the image data, 
+		// width, height, and the # of color channels.
 		unsigned char* data = stbi_load(facesCubemap[i].c_str(), &width, &height, &nrChannels, 0);
+		//If data for image was loaded correctly, enter the loop
 		if (data)
 		{
+			//Do not flip image on load
 			stbi_set_flip_vertically_on_load(false);
+			//Used to specify a two-dimensional texture image for the cubemap face at current index
 			glTexImage2D
 			(
+				//Specifies the target face of the cubemap
 				GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
 				0,
+				//Indicates the format for the texture(RGB)
 				GL_RGB,
+				//Image dimensions
 				width,
 				height,
 				0,
+				//Specify the format and type of the pixel data
 				GL_RGB,
 				GL_UNSIGNED_BYTE,
+				//Contains image data
 				data
 			);
+			//Free memory allocated by stb_image for loading the current image
 			stbi_image_free(data);
 		}
+		//If the current image fails to load, print message below
 		else
 		{
 			std::cout << "Failed to load texture: " << facesCubemap[i] << std::endl;
 			stbi_image_free(data);
 		}
 	}
-	/////////////////////END/////////////////////
 
-	skyboxShader.use();
-	skyboxShader.setInt("skybox", 0);
+	/////////////////////END/////////////////////
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
@@ -215,30 +226,27 @@ int main() {
 		//Clear both color buffer AND depth buffer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		unsigned int textureID;
-		glGenTextures(1, &textureID);
-		glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
-
 		shader.use();
 		glBindTexture(GL_TEXTURE_2D, cubemapTexture);
-		shader.setInt("_Texture", 0);
 		shader.setMat4("_ViewProjection", camera.ProjectionMatrix() * camera.ViewMatrix());
 
 		/////////////////////SKYBOX/////////////////////
 		glDepthFunc(GL_LEQUAL);
-		//glDepthMask(GL_FALSE);
 		skyboxShader.use();
 		skyboxShader.setInt("skybox", 0);
 		skyboxShader.setMat4("view", removeTranslation(camera.ViewMatrix()));
 		skyboxShader.setMat4("projection", camera.ProjectionMatrix());
 
+		//Binds skyboxVAO
 		glBindVertexArray(skyboxVAO);
+		//Activates texture unit 0
 		glActiveTexture(GL_TEXTURE0);
+		//Binds cube map texture to the active texture unit
 		glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+		//Draws the skybox using indexed rendered triangles and 36 indices
 		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+		//Unbinds the VAO
 		glBindVertexArray(0);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-
 		// Switch back to the normal depth function
 		glDepthMask(GL_LESS);
 		/////////////////////END/////////////////////
@@ -247,16 +255,13 @@ int main() {
 		//Draw Sphere
 		shader.setMat4("_Model", sphereTransform.getModelMatrix());
 		shader.setVec3("cameraPos", camera.position);
+		sphereMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
 
+		//For switching between vornoi and no vornoi
 		if (voronoi)
 			shader.setInt("_Voronoi", 1);
 		else
 			shader.setInt("_Voronoi", 0);
-
-		sphereMesh.draw((ew::DrawMode)appSettings.drawAsPoints);
-
-		shader.setMat4("_Model", cubeTransform.getModelMatrix());
-		cubeMesh.draw();
 
 		//Render UI
 		{
@@ -276,16 +281,6 @@ int main() {
 				}
 			}
 
-			//ImGui::ColorEdit3("BG color", &appSettings.bgColor.x);
-			ImGui::Checkbox("Draw as points", &appSettings.drawAsPoints);
-			if (ImGui::Checkbox("Wireframe", &appSettings.wireframe)) {
-				glPolygonMode(GL_FRONT_AND_BACK, appSettings.wireframe ? GL_LINE : GL_FILL);
-			}
-
-			ImGui::Text("Cube Controls");
-			ImGui::DragFloat3("Cube Size", &cubeTransform.scale.x, 0.1f);
-			ImGui::DragFloat3("Cube Transform", &cubeTransform.position.x, 0.1f);
-
 			ImGui::Text("Sphere Controls");
 			ImGui::DragFloat3("Sphere Scale", &sphereTransform.scale.x, 0.1f);
 			ImGui::DragFloat3("Sphere Transform", &sphereTransform.position.x, 0.1f);
@@ -302,6 +297,7 @@ int main() {
 
 		glfwSwapBuffers(window);
 	}
+	//Free up memory taken up by skyboxVAO and VBO
 	glDeleteVertexArrays(1, &skyboxVAO);
 	glDeleteBuffers(1, &skyboxVBO);
 	printf("Shutting down...");
