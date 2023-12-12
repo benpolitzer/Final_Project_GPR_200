@@ -5,8 +5,7 @@ out vec4 FragColor;
 
 in vec3 Position;
 in vec3 Normal;
-
-
+in vec2 UV;
 
 uniform vec3 cameraPos;
 uniform samplerCube skybox;
@@ -103,11 +102,12 @@ void main(){
     float thetaN = fract(theta);
 
     vec2 x = vec2(thetaN, phiN);
-    vec3 v = voronoi(vec2(50.0,100.0)*x);
+    //UV multiplied by scale passed into the vornoi function
+    vec3 v = voronoi(scale*UV);
 
     vec3 I = normalize(Position - cameraPos);   
     vec3 R = reflect(I, normalize(Normal)) * vec3(1.0, 1.0, -1.0);
-    vec3 C = texture(skybox, R*v.x).rgb * smoothstep( 0.0, 0.07, v.x );
+    vec3 C = texture(skybox, R*v.x).rgb * smoothstep( 0.0, 0.1, v.x);
     FragColor = vec4(C, 1.0);
     } else
     {
